@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Settings — MailScheduler{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}Configure your SMTP credentials and account preferences{% endblock %}
+{% block topbar_actions %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .settings-grid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+  .settings-nav { display: flex; flex-direction: column; gap: 4px; }
+  .sett-nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-radius: 10px;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    color: var(--text-secondary); text-align: left; width: 100%;
+    transition: all .2s;
+  }
+  .sett-nav-btn i { width: 18px; text-align: center; }
+  .sett-nav-btn:hover { background: rgba(108,99,255,0.1); color: var(--text-primary); }
+  .sett-nav-btn.active { background: rgba(108,99,255,0.18); color: var(--accent-2); border: 1px solid rgba(108,99,255,0.25); }
+
+  .sett-panel { display: none; }
+  .sett-panel.active { display: block; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+
+  .sett-section-title {
+    font-size: 18px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .sett-section-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+  .info-banner {
+    background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;
+    font-size: 13px; color: #7dd3fc; display: flex; gap: 10px; line-height: 1.6;
+  }
+  .warn-banner {
+    background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;
+    font-size: 13px; color: #fcd34d; display: flex; gap: 10px; line-height: 1.6;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .smtp-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .smtp-configured { background: rgba(16,185,129,0.12); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .smtp-not-configured { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-grid">
+  <!-- Sidebar nav -->
+  <div class="card" style="padding:16px;align-self:start;">
+    <div class="settings-nav">
+      <button class="sett-nav-btn active" onclick="showPanel('smtp', this)">
+        <i class="fas fa-server"></i> SMTP Config
+      </button>
+      <button class="sett-nav-btn" onclick="showPanel('profile', this)">
+        <i class="fas fa-user-circle"></i> Profile
+      </button>
+      <button class="sett-nav-btn" onclick="showPanel('password', this)">
+        <i class="fas fa-lock"></i> Change Password
+      </button>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div>
+
+    <!-- SMTP Panel -->
+    <div class="sett-panel active card" id="panel-smtp">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="sett-section-title">📡 SMTP Configuration</div>
+        {% if current_user.smtp_email %}
+        <span class="smtp-status smtp-configured"><i class="fas fa-circle-check"></i> Configured</span>
+        {% else %}
+        <span class="smtp-status smtp-not-configured"><i class="fas fa-circle-xmark"></i> Not Set</span>
+        {% endif %}
+      </div>
+      <p class="sett-section-sub">Set up your Gmail credentials for sending scheduled emails.</p>
+
+      <div class="info-banner">
+        <i class="fas fa-circle-info" style="flex-shrink:0;margin-top:1px;"></i>
+        <span>
+          Use a <strong>Gmail App Password</strong>, not your regular Gmail password.
+          Go to <em>Google Account → Security → 2-Step Verification → App Passwords</em> to generate one.
+        </span>
+      </div>
+
+      <form method="POST" action="{{ url_for('settings') }}" id="smtpForm">
+        <input type="hidden" name="action" value="smtp" />
+
+        <div class="form-group">
+          <label class="form-label" for="smtp_email">Gmail Address</label>
+          <div style="position:relative;">
+            <i class="fas fa-envelope" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="email" id="smtp_email" name="smtp_email" class="form-control"
+              style="padding-left:38px;"
+              placeholder="yourname@gmail.com"
+              value="{{ current_user.smtp_email or '' }}" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="smtp_password">Gmail App Password</label>
+          <div style="position:relative;">
+            <i class="fas fa-key" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="password" id="smtp_password" name="smtp_password" class="form-control"
+              style="padding-left:38px;padding-right:40px;"
+              placeholder="xxxx xxxx xxxx xxxx"
+              value="{{ current_user.smtp_password or '' }}" required />
+            <button type="button"
+              style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"
+              onclick="togglePw('smtp_password', this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <div class="form-hint">App passwords are 16 characters (shown with spaces: xxxx xxxx xxxx xxxx).</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="smtp_host">SMTP Host</label>
+            <input type="text" id="smtp_host" name="smtp_host" class="form-control"
+              value="{{ current_user.smtp_host or 'smtp.gmail.com' }}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="smtp_port">SMTP Port</label>
+            <input type="number" id="smtp_port" name="smtp_port" class="form-control"
+              value="{{ current_user.smtp_port or 587 }}" required />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-floppy-disk"></i> Save SMTP Settings
+          </button>
+          <button type="submit" class="btn btn-success" form="testForm">
+            <i class="fas fa-plug"></i> Test Connection
+          </button>
+        </div>
+      </form>
+
+      <!-- Test form (separate so action is test_smtp) -->
+      <form method="POST" action="{{ url_for('settings') }}" id="testForm" style="display:none;">
+        <input type="hidden" name="action" value="test_smtp" />
+      </form>
+    </div>
+
+    <!-- Profile Panel -->
+    <div class="sett-panel card" id="panel-profile">
+      <div class="sett-section-title">👤 Profile Settings</div>
+      <p class="sett-section-sub">Update your username and email address.</p>
+
+      <form method="POST" action="{{ url_for('settings') }}">
+        <input type="hidden" name="action" value="profile" />
+
+        <div class="form-group">
+          <label class="form-label" for="p_username">Username</label>
+          <div style="position:relative;">
+            <i class="fas fa-user" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="text" id="p_username" name="username" class="form-control"
+              style="padding-left:38px;"
+              value="{{ current_user.username }}" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="p_email">Email Address</label>
+          <div style="position:relative;">
+            <i class="fas fa-envelope" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="email" id="p_email" name="email" class="form-control"
+              style="padding-left:38px;"
+              value="{{ current_user.email }}" />
+          </div>
+          <div class="form-hint">This email is used to receive password reset links.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-floppy-disk"></i> Update Profile
+        </button>
+      </form>
+    </div>
+
+    <!-- Password Panel -->
+    <div class="sett-panel card" id="panel-password">
+      <div class="sett-section-title">🔒 Change Password</div>
+      <p class="sett-section-sub">Update your login password.</p>
+
+      <div class="warn-banner">
+        <i class="fas fa-triangle-exclamation" style="flex-shrink:0;margin-top:1px;"></i>
+        <span>After changing your password, you will remain logged in on this device.</span>
+      </div>
+
+      <form method="POST" action="{{ url_for('settings') }}">
+        <input type="hidden" name="action" value="password" />
+
+        <div class="form-group">
+          <label class="form-label" for="current_password">Current Password</label>
+          <div style="position:relative;">
+            <i class="fas fa-lock" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="password" id="current_password" name="current_password" class="form-control"
+              style="padding-left:38px;padding-right:40px;" placeholder="Your current password" required />
+            <button type="button"
+              style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"
+              onclick="togglePw('current_password',this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="new_password">New Password</label>
+          <div style="position:relative;">
+            <i class="fas fa-lock" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="password" id="new_password" name="new_password" class="form-control"
+              style="padding-left:38px;padding-right:40px;" placeholder="Min. 8 characters"
+              minlength="8" required />
+            <button type="button"
+              style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"
+              onclick="togglePw('new_password',this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirm_password">Confirm New Password</label>
+          <div style="position:relative;">
+            <i class="fas fa-lock" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;"></i>
+            <input type="password" id="confirm_password" name="confirm_password" class="form-control"
+              style="padding-left:38px;padding-right:40px;" placeholder="Repeat new password" required />
+            <button type="button"
+              style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"
+              onclick="togglePw('confirm_password',this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-check-circle"></i> Change Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function showPanel(name, btn) {
+    document.querySelectorAll('.sett-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sett-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function togglePw(id, btn) {
+    const f = document.getElementById(id);
+    f.type = f.type === 'password' ? 'text' : 'password';
+    btn.querySelector('i').className = f.type === 'text' ? 'fas fa-eye-slash' : 'fas fa-eye';
+  }
+
+  // Open the correct panel if there's a flash about SMTP, profile, or password
+  // (simple check via URL hash)
+  const hash = window.location.hash;
+  if (hash === '#profile') showPanel('profile', document.querySelectorAll('.sett-nav-btn')[1]);
+  if (hash === '#password') showPanel('password', document.querySelectorAll('.sett-nav-btn')[2]);
+</script>
+{% endblock %}

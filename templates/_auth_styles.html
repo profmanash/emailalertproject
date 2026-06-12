@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Login — MailScheduler{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { background: var(--bg-primary); }
+  .auth-wrapper {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    position: relative;
+  }
+  .auth-card {
+    width: 100%; max-width: 440px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 40px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    position: relative; z-index: 1;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+  .auth-logo {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 32px;
+  }
+  .auth-logo-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #fff;
+    box-shadow: 0 6px 20px rgba(108,99,255,0.4);
+  }
+  .auth-logo-text .title {
+    font-size: 20px; font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .auth-logo-text .sub { font-size: 12px; color: var(--text-muted); }
+  .auth-heading { font-size: 26px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
+  .auth-subheading { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; }
+
+  .input-wrapper { position: relative; }
+  .input-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 15px; pointer-events: none;
+  }
+  .input-wrapper .form-control { padding-left: 40px; }
+  .password-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 15px; transition: color 0.2s;
+  }
+  .password-toggle:hover { color: var(--accent); }
+
+  .remember-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .checkbox-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary); cursor: pointer;
+  }
+  .checkbox-label input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+  .forgot-link {
+    font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .forgot-link:hover { color: var(--accent-2); }
+
+  .btn-auth {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 6px 20px rgba(108,99,255,0.35);
+    transition: all 0.2s ease;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-auth:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(108,99,255,0.5); }
+  .btn-auth:active { transform: translateY(0); }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 24px 0; color: var(--text-muted); font-size: 12px;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .auth-footer { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 20px; }
+  .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .auth-footer a:hover { color: var(--accent-2); }
+
+  /* Decorative blobs */
+  .auth-blob {
+    position: fixed; border-radius: 50%; filter: blur(90px); opacity: 0.12; pointer-events: none;
+  }
+  .blob-1 { width:500px;height:500px;background:var(--accent);top:-150px;left:-150px; }
+  .blob-2 { width:350px;height:350px;background:var(--accent-2);bottom:-100px;right:-100px; }
+  .blob-3 { width:200px;height:200px;background:var(--accent-3);top:40%;left:60%; }
+</style>
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+{% extends "base.html" %}

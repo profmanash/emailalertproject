@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — MailScheduler{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Overview of your scheduled emails{% endblock %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon purple"><i class="fas fa-envelope-open-text"></i></div>
+    <div>
+      <div class="stat-value" id="stat-total">{{ total_jobs }}</div>
+      <div class="stat-label">Total Email Jobs</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon amber"><i class="fas fa-hourglass-half"></i></div>
+    <div>
+      <div class="stat-value" id="stat-pending">{{ pending }}</div>
+      <div class="stat-label">Pending Schedules</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+    <div>
+      <div class="stat-value" id="stat-sent">{{ sent }}</div>
+      <div class="stat-label">Emails Sent</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red"><i class="fas fa-circle-xmark"></i></div>
+    <div>
+      <div class="stat-value" id="stat-failed">{{ failed }}</div>
+      <div class="stat-label">Failed</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon cyan"><i class="fas fa-calendar-days"></i></div>
+    <div>
+      <div class="stat-value">{{ total_schedules }}</div>
+      <div class="stat-label">Total Schedules</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+  <!-- Upcoming -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fas fa-clock" style="color:var(--warning);margin-right:8px;"></i>Upcoming Sends</div>
+        <div class="card-subtitle">Next scheduled emails</div>
+      </div>
+      <a href="{{ url_for('schedules') }}" class="btn btn-outline btn-sm">View all</a>
+    </div>
+    {% if upcoming %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Subject</th><th>Recipients</th><th>Scheduled</th></tr>
+        </thead>
+        <tbody>
+          {% for sch in upcoming %}
+          <tr>
+            <td style="color:var(--text-primary);font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              {{ sch.email_job.subject }}
+            </td>
+            <td style="font-size:12px;">{{ sch.email_job.recipients[:40] }}{% if sch.email_job.recipients|length > 40 %}…{% endif %}</td>
+            <td>
+              <span style="font-size:12px;color:var(--warning);">
+                <i class="fas fa-clock" style="margin-right:4px;"></i>
+                {{ sch.scheduled_at.strftime('%b %d, %H:%M') }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">No upcoming schedules</div>
+      <div class="empty-text">Create your first scheduled email</div>
+      <a href="{{ url_for('compose') }}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> Compose Email
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Recently Sent -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--success);margin-right:8px;"></i>Recently Sent</div>
+        <div class="card-subtitle">Last delivered emails</div>
+      </div>
+    </div>
+    {% if recent_sent %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Subject Sent</th><th>Sent At</th></tr>
+        </thead>
+        <tbody>
+          {% for sch in recent_sent %}
+          <tr>
+            <td style="color:var(--text-primary);font-size:13px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              {{ sch.actual_subject_used or sch.email_job.subject }}
+            </td>
+            <td>
+              <span style="font-size:12px;color:var(--success);">
+                <i class="fas fa-check" style="margin-right:4px;"></i>
+                {{ sch.sent_at.strftime('%b %d, %H:%M') if sch.sent_at else '-' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📬</div>
+      <div class="empty-title">No emails sent yet</div>
+      <div class="empty-text">Sent emails will appear here</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Quick Action Banner -->
+<div style="margin-top:24px;padding:24px 28px;background:linear-gradient(135deg,rgba(108,99,255,0.12),rgba(167,139,250,0.08));border:1px solid rgba(108,99,255,0.25);border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+  <div>
+    <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">
+      🚀 Ready to schedule an email?
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);">
+      Set up automated emails with multiple delivery times, attachments, and smart subject numbering.
+    </div>
+  </div>
+  <a href="{{ url_for('compose') }}" class="btn btn-primary" style="flex-shrink:0;">
+    <i class="fas fa-pen-to-square"></i> Compose Email
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Auto-refresh stats every 30 seconds
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      document.getElementById('stat-pending').textContent = data.pending;
+      document.getElementById('stat-sent').textContent = data.sent;
+      document.getElementById('stat-failed').textContent = data.failed;
+    } catch(e) {}
+  }, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}Compose Email — MailScheduler{% endblock %}
+{% block page_title %}Compose Email{% endblock %}
+{% block page_subtitle %}Create a new scheduled email with multiple delivery times{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('schedules') }}" class="btn btn-outline btn-sm">
+  <i class="fas fa-list"></i> All Schedules
+</a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .compose-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+  .schedule-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(108,99,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    margin-bottom: 10px;
+    animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+  .schedule-item .sch-time { flex: 1; font-size: 14px; color: var(--text-primary); font-weight: 500; }
+  .schedule-item .sch-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .remove-sch {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; padding: 4px; border-radius: 6px; transition: color .2s;
+  }
+  .remove-sch:hover { color: var(--danger); }
+  .add-schedule-row { display: flex; gap: 10px; margin-top: 14px; }
+  .add-schedule-row .form-control { flex: 1; }
+
+  .file-upload-area {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 28px 20px; text-align: center;
+    cursor: pointer; transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .file-upload-area:hover, .file-upload-area.drag-over {
+    border-color: var(--accent); background: rgba(108,99,255,0.07);
+  }
+  .file-upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .file-upload-icon { font-size: 32px; color: var(--text-muted); margin-bottom: 10px; }
+  .file-upload-text { font-size: 14px; color: var(--text-muted); }
+  .file-upload-text strong { color: var(--accent); }
+  .file-chosen { margin-top: 10px; font-size: 13px; color: var(--accent); display: none; }
+
+  .subject-preview {
+    background: rgba(108,99,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    margin-top: 14px;
+  }
+  .subject-preview-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+  .subject-preview-row { font-size: 13px; color: var(--text-secondary); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+  .subject-preview-row .num { color: var(--accent); font-weight: 600; min-width: 18px; }
+
+  .info-card {
+    background: rgba(56,189,248,0.07); border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;
+    font-size: 13px; color: #7dd3fc; display: flex; gap: 10px;
+  }
+
+  .rich-editor-toolbar {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    padding: 8px 10px; background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border); border-bottom: none;
+    border-radius: 10px 10px 0 0;
+  }
+  .toolbar-btn {
+    width: 30px; height: 30px; border: none; background: transparent;
+    color: var(--text-muted); cursor: pointer; border-radius: 6px;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .toolbar-btn:hover { background: rgba(108,99,255,0.15); color: var(--accent); }
+  .toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 3px 4px; }
+  #editorArea {
+    min-height: 200px; padding: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 0 0 10px 10px;
+    color: var(--text-primary); font-size: 14px;
+    font-family: inherit; outline: none;
+    line-height: 1.7;
+  }
+  #editorArea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+  #editorArea[placeholder]:empty::before { content: attr(placeholder); color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('compose') }}" enctype="multipart/form-data" id="composeForm">
+  <div class="compose-grid">
+
+    <!-- LEFT: Email content -->
+    <div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📧 Email Content</div>
+            <div class="card-subtitle">Compose your message</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="subject">Subject Line <span style="color:var(--danger)">*</span></label>
+          <div style="position:relative;">
+            <input type="text" id="subject" name="subject" class="form-control"
+              placeholder="e.g. Task Completion Report"
+              value="{{ form_data.get('subject','') }}" required
+              oninput="updatePreview()" />
+          </div>
+          <div class="form-hint">The first send uses this subject as-is. Subsequent sends auto-prefix it.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Body <span style="color:var(--danger)">*</span></label>
+          <div class="rich-editor-toolbar">
+            <button type="button" class="toolbar-btn" onclick="fmt('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+            <button type="button" class="toolbar-btn" onclick="fmt('italic')" title="Italic"><i class="fas fa-italic"></i></button>
+            <button type="button" class="toolbar-btn" onclick="fmt('underline')" title="Underline"><i class="fas fa-underline"></i></button>
+            <div class="toolbar-sep"></div>
+            <button type="button" class="toolbar-btn" onclick="fmt('insertUnorderedList')" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="toolbar-btn" onclick="fmt('insertOrderedList')" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+            <div class="toolbar-sep"></div>
+            <button type="button" class="toolbar-btn" onclick="fmt('justifyLeft')" title="Left"><i class="fas fa-align-left"></i></button>
+            <button type="button" class="toolbar-btn" onclick="fmt('justifyCenter')" title="Center"><i class="fas fa-align-center"></i></button>
+            <button type="button" class="toolbar-btn" onclick="fmt('justifyRight')" title="Right"><i class="fas fa-align-right"></i></button>
+            <div class="toolbar-sep"></div>
+            <button type="button" class="toolbar-btn" onclick="createLink()" title="Link"><i class="fas fa-link"></i></button>
+          </div>
+          <div id="editorArea" contenteditable="true"
+            placeholder="Write your email content here...">{{ form_data.get('body','') | safe }}</div>
+          <input type="hidden" id="body" name="body" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="recipients">Recipients <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="recipients" name="recipients" class="form-control"
+            placeholder="email1@example.com, email2@example.com"
+            value="{{ form_data.get('recipients','') }}" required />
+          <div class="form-hint">Separate multiple email addresses with commas.</div>
+        </div>
+      </div>
+
+      <!-- Attachment -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📎 Attachment <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(optional)</span></div>
+            <div class="card-subtitle">Max 16 MB · PDF, DOCX, XLSX, PNG, JPG, ZIP…</div>
+          </div>
+        </div>
+        <div class="file-upload-area" id="uploadArea" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+          <input type="file" id="attachment" name="attachment" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.gif,.zip,.rar" onchange="fileChosen(this)" />
+          <div class="file-upload-icon">☁️</div>
+          <div class="file-upload-text">
+            Drop file here or <strong>click to browse</strong>
+          </div>
+          <div class="file-chosen" id="fileChosen">✅ <span id="fileName"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Schedules + Preview -->
+    <div>
+      <!-- Subject preview -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">👁 Subject Preview</div>
+            <div class="card-subtitle">How subjects will look per send</div>
+          </div>
+        </div>
+        <div class="info-card">
+          <i class="fas fa-circle-info" style="flex-shrink:0;margin-top:1px;"></i>
+          <span>For the same email job, each subsequent delivery gets an auto-incremented prefix.</span>
+        </div>
+        <div class="subject-preview" id="previewBox">
+          <div class="subject-preview-label">Subject line per send</div>
+          <div class="subject-preview-row"><span class="num">1st</span><span id="prev1" style="color:var(--text-primary);">—</span></div>
+          <div class="subject-preview-row"><span class="num">2nd</span><span id="prev2">—</span></div>
+          <div class="subject-preview-row"><span class="num">3rd</span><span id="prev3">—</span></div>
+          <div class="subject-preview-row"><span class="num">4th</span><span id="prev4">—</span></div>
+        </div>
+      </div>
+
+      <!-- Schedules -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🗓 Delivery Schedules</div>
+            <div class="card-subtitle">Add one or more send times</div>
+          </div>
+          <span class="badge badge-pending" id="schedCount">0 added</span>
+        </div>
+
+        <div id="scheduleList"></div>
+
+        <div class="add-schedule-row">
+          <input type="datetime-local" id="newSchedTime" class="form-control"
+            min="{{ now_str }}" />
+          <button type="button" class="btn btn-primary btn-sm" onclick="addSchedule()">
+            <i class="fas fa-plus"></i> Add
+          </button>
+        </div>
+        <div class="form-hint" style="margin-top:8px;">All times are in your local timezone.</div>
+
+        <!-- Hidden inputs populated by JS -->
+        <div id="hiddenInputs"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:20px;padding:14px;font-size:15px;" id="submitBtn">
+        <i class="fas fa-calendar-check"></i> Schedule Email
+      </button>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const scheduleTimes = [];
+
+  function addSchedule() {
+    const input = document.getElementById('newSchedTime');
+    const val = input.value;
+    if (!val) { alert('Please pick a date and time.'); return; }
+    if (scheduleTimes.includes(val)) { alert('This time is already added.'); return; }
+    if (new Date(val) <= new Date()) { alert('Please choose a future date and time.'); return; }
+    scheduleTimes.push(val);
+    renderSchedules();
+    input.value = '';
+  }
+
+  function removeSchedule(idx) {
+    scheduleTimes.splice(idx, 1);
+    renderSchedules();
+  }
+
+  function renderSchedules() {
+    const list = document.getElementById('scheduleList');
+    const hidden = document.getElementById('hiddenInputs');
+    const countBadge = document.getElementById('schedCount');
+
+    list.innerHTML = '';
+    hidden.innerHTML = '';
+
+    scheduleTimes.forEach((t, i) => {
+      const dt = new Date(t);
+      const formatted = dt.toLocaleString('en-IN', {
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit', hour12:true
+      });
+      list.innerHTML += `
+        <div class="schedule-item">
+          <div class="sch-num">${i+1}</div>
+          <div class="sch-time"><i class="fas fa-clock" style="color:var(--warning);margin-right:6px;font-size:12px;"></i>${formatted}</div>
+          <button type="button" class="remove-sch" onclick="removeSchedule(${i})"><i class="fas fa-times"></i></button>
+        </div>`;
+      hidden.innerHTML += `<input type="hidden" name="schedule_times" value="${t}" />`;
+    });
+
+    countBadge.textContent = scheduleTimes.length + ' added';
+  }
+
+  function updatePreview() {
+    const subj = document.getElementById('subject').value || '—';
+    document.getElementById('prev1').textContent = subj;
+    document.getElementById('prev2').textContent = subj !== '—' ? `Task Completion Reminder 2 : ${subj}` : '—';
+    document.getElementById('prev3').textContent = subj !== '—' ? `Task Completion Reminder 3 : ${subj}` : '—';
+    document.getElementById('prev4').textContent = subj !== '—' ? `Task Completion Reminder 4 : ${subj}` : '—';
+  }
+
+  // Rich text editor
+  function fmt(cmd) { document.execCommand(cmd, false, null); document.getElementById('editorArea').focus(); }
+  function createLink() {
+    const url = prompt('Enter URL:');
+    if (url) document.execCommand('createLink', false, url);
+  }
+
+  // Sync editor content to hidden input before submit
+  document.getElementById('composeForm').addEventListener('submit', function(e) {
+    const body = document.getElementById('editorArea').innerHTML.trim();
+    document.getElementById('body').value = body;
+    if (!body || body === '') {
+      e.preventDefault(); alert('Email body is required.'); return;
+    }
+    if (scheduleTimes.length === 0) {
+      e.preventDefault(); alert('Please add at least one schedule time.'); return;
+    }
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Scheduling...';
+    btn.disabled = true;
+  });
+
+  // File upload UI
+  function fileChosen(input) {
+    if (input.files.length > 0) {
+      document.getElementById('fileChosen').style.display = 'block';
+      document.getElementById('fileName').textContent = input.files[0].name;
+    }
+  }
+  function dragOver(e) { e.preventDefault(); document.getElementById('uploadArea').classList.add('drag-over'); }
+  function dragLeave(e) { document.getElementById('uploadArea').classList.remove('drag-over'); }
+  function dropFile(e) {
+    e.preventDefault();
+    dragLeave(e);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      document.getElementById('attachment').files = files;
+      fileChosen(document.getElementById('attachment'));
+    }
+  }
+
+  // Set min datetime to now
+  const nowDt = new Date();
+  nowDt.setMinutes(nowDt.getMinutes() - nowDt.getTimezoneOffset());
+  document.getElementById('newSchedTime').min = nowDt.toISOString().slice(0,16);
+
+  // Init preview
+  updatePreview();
+</script>
+{% endblock %}

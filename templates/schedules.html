@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Schedules — MailScheduler{% endblock %}
+{% block page_title %}Email Schedules{% endblock %}
+{% block page_subtitle %}Manage all your scheduled email jobs{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('compose') }}" class="btn btn-primary btn-sm">
+  <i class="fas fa-plus"></i> New Email
+</a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .job-card { margin-bottom: 24px; }
+  .job-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    background: rgba(108,99,255,0.06);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .2s;
+    border-radius: 14px 14px 0 0;
+  }
+  .job-header:hover { background: rgba(108,99,255,0.1); }
+  .job-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .job-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .job-body { padding: 0; }
+  .job-body.collapsed { display: none; }
+
+  .attach-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25);
+    color: #7dd3fc; font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    text-decoration: none;
+  }
+  .attach-tag:hover { background: rgba(56,189,248,0.2); }
+
+  .add-sched-form {
+    display: none; padding: 16px 22px;
+    background: rgba(108,99,255,0.04);
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 14px 14px;
+  }
+  .add-sched-form.open { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .toggle-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 14px; padding: 4px;
+    transition: color .2s, transform .2s;
+  }
+  .toggle-btn.open { transform: rotate(180deg); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if jobs %}
+  <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:14px;color:var(--text-muted);">
+      {{ jobs|length }} email job{{ 's' if jobs|length != 1 else '' }} found
+    </div>
+    <div style="display:flex;gap:8px;">
+      <span class="badge badge-pending">
+        <i class="fas fa-circle" style="font-size:7px;"></i>
+        Pending
+      </span>
+      <span class="badge badge-sent">
+        <i class="fas fa-circle" style="font-size:7px;"></i>
+        Sent
+      </span>
+      <span class="badge badge-failed">
+        <i class="fas fa-circle" style="font-size:7px;"></i>
+        Failed
+      </span>
+    </div>
+  </div>
+
+  {% for job in jobs %}
+  <div class="card job-card" style="padding:0;overflow:hidden;">
+    <!-- Job Header -->
+    <div class="job-header" onclick="toggleJob({{ job.id }})">
+      <div style="flex:1;min-width:0;">
+        <div class="job-title">
+          <i class="fas fa-envelope" style="color:var(--accent);margin-right:8px;"></i>
+          {{ job.subject }}
+        </div>
+        <div class="job-meta">
+          <span style="margin-right:14px;"><i class="fas fa-users" style="margin-right:4px;"></i>{{ job.recipients }}</span>
+          <span style="margin-right:14px;"><i class="fas fa-calendar" style="margin-right:4px;"></i>Created {{ job.created_at.strftime('%b %d, %Y') }}</span>
+          {% if job.attachment_filename %}
+          <a href="{{ url_for('uploaded_file', filename=job.attachment_path.split('\\')[-1].split('/')[-1]) }}"
+             class="attach-tag" target="_blank" onclick="event.stopPropagation()">
+            <i class="fas fa-paperclip"></i>{{ job.attachment_filename }}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:16px;">
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Pending</div>
+          <div style="font-size:18px;font-weight:700;color:var(--warning);">{{ job.pending_count }}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Sent</div>
+          <div style="font-size:18px;font-weight:700;color:var(--success);">{{ job.sent_count }}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Failed</div>
+          <div style="font-size:18px;font-weight:700;color:var(--danger);">{{ job.failed_count }}</div>
+        </div>
+        <button class="toggle-btn" id="toggle-{{ job.id }}" onclick="event.stopPropagation()">
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <form method="POST" action="{{ url_for('delete_job', job_id=job.id) }}"
+          onsubmit="return confirm('Delete this entire email job and all its schedules?')"
+          onclick="event.stopPropagation()">
+          <button class="btn btn-danger btn-xs" type="submit">
+            <i class="fas fa-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Schedule Table -->
+    <div class="job-body collapsed" id="job-{{ job.id }}">
+      {% if job.schedules %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Scheduled At</th>
+              <th>Status</th>
+              <th>Subject Used</th>
+              <th>Sent At</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sch in job.schedules | sort(attribute='scheduled_at') %}
+            <tr>
+              <td style="color:var(--text-muted);">{{ loop.index }}</td>
+              <td style="color:var(--text-primary);font-weight:500;">
+                <i class="fas fa-clock" style="color:var(--warning);margin-right:5px;font-size:11px;"></i>
+                {{ sch.scheduled_at.strftime('%b %d, %Y %H:%M') }}
+              </td>
+              <td>
+                <span class="badge badge-{{ sch.status }}">
+                  <i class="fas fa-{% if sch.status=='sent' %}check{% elif sch.status=='failed' %}xmark{% else %}hourglass-half{% endif %}"
+                     style="font-size:9px;"></i>
+                  {{ sch.status | capitalize }}
+                </span>
+              </td>
+              <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{ sch.actual_subject_used or '—' }}
+              </td>
+              <td style="font-size:12px;color:var(--success);">
+                {{ sch.sent_at.strftime('%b %d, %H:%M') if sch.sent_at else '—' }}
+              </td>
+              <td style="font-size:12px;color:var(--danger);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{ sch.error_msg or '' }}
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center;">
+                {% if sch.status == 'pending' %}
+                <form method="POST" action="{{ url_for('send_now', schedule_id=sch.id) }}"
+                  onsubmit="return confirm('Send this email immediately?')">
+                  <button class="btn btn-success btn-xs" type="submit" title="Send Now">
+                    <i class="fas fa-paper-plane"></i> Now
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('delete_schedule', schedule_id=sch.id) }}"
+                  onsubmit="return confirm('Remove this schedule?')">
+                  <button class="btn btn-danger btn-xs" type="submit" title="Delete">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </form>
+                {% elif sch.status == 'failed' %}
+                <span title="{{ sch.error_msg }}" style="cursor:help;color:var(--danger);font-size:11px;">
+                  <i class="fas fa-circle-info"></i> See note
+                </span>
+                {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">
+        No schedules attached to this job.
+      </div>
+      {% endif %}
+
+      <!-- Add new schedule to existing job -->
+      <div style="padding:12px 22px 16px;">
+        <button type="button" class="btn btn-outline btn-sm"
+          onclick="toggleAddForm({{ job.id }})">
+          <i class="fas fa-plus"></i> Add Schedule Time
+        </button>
+      </div>
+      <div class="add-sched-form" id="addForm-{{ job.id }}">
+        <form method="POST" action="{{ url_for('add_schedule', job_id=job.id) }}"
+          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%;">
+          <input type="datetime-local" name="new_schedule_time" class="form-control"
+            style="max-width:260px;" required />
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-calendar-plus"></i> Add
+          </button>
+          <button type="button" class="btn btn-outline btn-sm"
+            onclick="toggleAddForm({{ job.id }})">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <div class="empty-title">No email jobs yet</div>
+    <div class="empty-text">Create your first scheduled email to get started.</div>
+    <a href="{{ url_for('compose') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Compose Email
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleJob(id) {
+    const body = document.getElementById('job-' + id);
+    const btn = document.getElementById('toggle-' + id);
+    body.classList.toggle('collapsed');
+    btn.classList.toggle('open');
+  }
+
+  function toggleAddForm(jobId) {
+    const form = document.getElementById('addForm-' + jobId);
+    form.classList.toggle('open');
+  }
+</script>
+{% endblock %}

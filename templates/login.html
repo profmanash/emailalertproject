@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — MailScheduler</title>
+  <meta name="description" content="Login to MailScheduler — Gmail automation and email scheduling platform." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg-primary:#0a0a14;--bg-card:#16162a;--border:rgba(108,99,255,0.18);
+      --accent:#6c63ff;--accent-2:#a78bfa;--accent-3:#38bdf8;
+      --text-primary:#f0f0ff;--text-secondary:#9999bb;--text-muted:#55557a;
+      --danger:#ef4444;--success:#10b981;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+    .auth-blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.1;pointer-events:none;}
+    .blob-1{width:600px;height:600px;background:var(--accent);top:-200px;left:-200px;}
+    .blob-2{width:400px;height:400px;background:var(--accent-2);bottom:-100px;right:-100px;}
+    .blob-3{width:250px;height:250px;background:var(--accent-3);top:50%;left:55%;}
+    .auth-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;}
+    .auth-card{width:100%;max-width:450px;background:var(--bg-card);border:1px solid var(--border);border-radius:22px;padding:48px 44px;box-shadow:0 28px 72px rgba(0,0,0,0.55);position:relative;z-index:1;animation:fadeUp .45s ease;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+    .auth-logo{display:flex;align-items:center;gap:14px;margin-bottom:36px;}
+    .auth-logo-icon{width:54px;height:54px;border-radius:15px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 8px 24px rgba(108,99,255,0.4);}
+    .auth-logo .brand{font-size:21px;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .auth-logo .brand-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+    .auth-heading{font-size:27px;font-weight:800;color:var(--text-primary);margin-bottom:6px;}
+    .auth-sub{font-size:14px;color:var(--text-muted);margin-bottom:30px;}
+
+    .form-group{margin-bottom:18px;}
+    .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:7px;letter-spacing:.4px;text-transform:uppercase;}
+    .input-wrap{position:relative;}
+    .input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;}
+    .form-control{width:100%;padding:12px 14px 12px 40px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:11px;color:var(--text-primary);font-family:inherit;font-size:14px;transition:border-color .2s,box-shadow .2s;}
+    .form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,0.18);}
+    .form-control::placeholder{color:var(--text-muted);}
+    .pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;transition:color .2s;}
+    .pw-toggle:hover{color:var(--accent);}
+    .form-control.pw-field{padding-right:40px;}
+
+    .remember-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .check-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer;}
+    .check-label input{accent-color:var(--accent);width:15px;height:15px;}
+    .link{color:var(--accent);text-decoration:none;font-size:13px;font-weight:600;transition:color .2s;}
+    .link:hover{color:var(--accent-2);}
+
+    .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 6px 22px rgba(108,99,255,0.38);transition:all .2s ease;display:flex;align-items:center;justify-content:center;gap:9px;}
+    .btn-submit:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(108,99,255,0.5);}
+    .btn-submit:active{transform:translateY(0);}
+
+    .auth-footer{text-align:center;font-size:13px;color:var(--text-muted);margin-top:22px;}
+    .auth-footer a{color:var(--accent);text-decoration:none;font-weight:600;}
+    .auth-footer a:hover{color:var(--accent-2);}
+
+    .alerts{margin-bottom:18px;}
+    .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:8px;font-size:13px;animation:slideDown .3s ease;}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .alert-success{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+    .alert-danger{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+    .alert-info{background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#7dd3fc;}
+    .alert-warning{background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#fcd34d;}
+    .alert-close{margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:15px;}
+  </style>
+</head>
+<body>
+<div class="auth-blob blob-1"></div>
+<div class="auth-blob blob-2"></div>
+<div class="auth-blob blob-3"></div>
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><i class="fas fa-envelope-open-text"></i></div>
+      <div>
+        <div class="brand">MailScheduler</div>
+        <div class="brand-sub">Gmail Automation Platform</div>
+      </div>
+    </div>
+
+    <h1 class="auth-heading">Welcome back</h1>
+    <p class="auth-sub">Sign in to manage your scheduled emails</p>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="alerts">
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">
+          <i class="fas fa-{% if cat == 'success' %}circle-check{% elif cat == 'danger' %}circle-xmark{% elif cat == 'warning' %}triangle-exclamation{% else %}circle-info{% endif %}"></i>
+          <span>{{ msg }}</span>
+          <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="identifier">Username or Email</label>
+        <div class="input-wrap">
+          <i class="fas fa-user input-icon"></i>
+          <input
+            type="text" id="identifier" name="identifier"
+            class="form-control" placeholder="Enter username or email"
+            value="{{ request.form.get('identifier', '') }}"
+            required autocomplete="username"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock input-icon"></i>
+          <input
+            type="password" id="password" name="password"
+            class="form-control pw-field" placeholder="Enter your password"
+            required autocomplete="current-password"
+          />
+          <button type="button" class="pw-toggle" onclick="togglePassword('password', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="remember-row">
+        <label class="check-label">
+          <input type="checkbox" name="remember" id="remember" />
+          Remember me
+        </label>
+        <a href="{{ url_for('forgot_password') }}" class="link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn-submit" id="loginBtn">
+        <i class="fas fa-right-to-bracket"></i> Sign In
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="{{ url_for('register') }}">Create one</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePassword(fieldId, btn) {
+    const field = document.getElementById(fieldId);
+    const icon = btn.querySelector('i');
+    if (field.type === 'password') {
+      field.type = 'text';
+      icon.className = 'fas fa-eye-slash';
+    } else {
+      field.type = 'password';
+      icon.className = 'fas fa-eye';
+    }
+  }
+
+  // Button loading state
+  document.getElementById('loginForm').addEventListener('submit', function() {
+    const btn = document.getElementById('loginBtn');
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in...';
+    btn.disabled = true;
+  });
+
+  // Auto dismiss alerts
+  document.querySelectorAll('.alert').forEach(el => {
+    setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 5000);
+  });
+</script>
+</body>
+</html>
